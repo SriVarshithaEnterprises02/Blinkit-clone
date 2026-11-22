@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>admin</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #F4F6F9;
+      color: #1C1C1C;
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-16">
+
+  <!-- PIN Lock Screen -->
+  <div id="pinScreen" class="fixed inset-0 z-50 bg-neutral-900/95 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-xs rounded-3xl p-6 text-center space-y-4 shadow-2xl">
+      <div class="w-12 h-12 mx-auto rounded-2xl bg-[#F8CB46] flex items-center justify-center text-2xl">🔐</div>
+      <div>
+        <h1 class="text-lg font-extrabold text-neutral-900">Store Admin Panel</h1>
+        <p class="text-xs text-neutral-500 mt-0.5">Default PIN: <span class="font-bold text-neutral-800">1234</span></p>
+      </div>
+      <input id="pinInput" type="password" inputmode="numeric" maxlength="6" placeholder="Enter PIN" class="w-full text-center tracking-widest text-lg font-bold px-4 py-2.5 rounded-xl border border-neutral-300 focus:outline-none focus:ring-2 focus:ring-[#0C831F]" />
+      <p id="pinError" class="hidden text-xs font-semibold text-red-600">Incorrect PIN. Try 1234.</p>
+      <button id="unlockBtn" type="button" class="w-full py-2.5 rounded-xl bg-[#0C831F] hover:bg-[#096b18] text-white font-extrabold text-sm">Unlock Admin</button>
+    </div>
+  </div>
+
+  <!-- Top Header -->
+  <header class="sticky top-0 z-30 bg-white border-b border-neutral-200 shadow-sm">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-[#F8CB46] flex items-center justify-center text-lg font-extrabold">⚡</div>
+        <div>
+          <h1 class="text-sm sm:text-base font-extrabold text-neutral-900 leading-tight">QuickKart Admin</h1>
+          <div class="flex items-center gap-1.5 text-[11px] font-semibold text-neutral-500">
+            <span id="dbStatusDot" class="w-2 h-2 rounded-full bg-[#0C831F]"></span>
+            <span id="dbStatusText">Firebase Connected</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="refreshAllBtn" type="button" class="px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-xs font-bold text-neutral-800">↻ Refresh</button>
+        <button id="lockBtn" type="button" class="px-2.5 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-xs font-bold text-neutral-700">🔒</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="max-w-4xl mx-auto px-4 flex gap-2 pb-2.5">
+      <button id="tabOrders" type="button" class="admin-tab flex-1 py-2 rounded-xl bg-[#0C831F] text-white text-xs font-extrabold">Orders (<span id="ordersCountBadge">0</span>)</button>
+      <button id="tabCatalog" type="button" class="admin-tab flex-1 py-2 rounded-xl bg-neutral-100 text-neutral-700 text-xs font-extrabold">Catalog (<span id="catalogCountBadge">0</span>)</button>
+      <button id="tabRiders" type="button" class="admin-tab flex-1 py-2 rounded-xl bg-neutral-100 text-neutral-700 text-xs font-extrabold">Riders (<span id="ridersCountBadge">0</span>)</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-4xl mx-auto px-4 pt-4">
+
+    <!-- ORDERS TAB -->
+    <section id="ordersSection" class="space-y-3">
+      <div id="ordersContainer" class="space-y-3">
+        <!-- Populated by JS -->
+      </div>
+    </section>
+
+    <!-- CATALOG TAB -->
+    <section id="catalogSection" class="hidden space-y-4">
+      <!-- Quick Seed + Add Product Bar -->
+      <div class="bg-white rounded-2xl border border-neutral-200 p-4 space-y-3 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-sm font-extrabold text-neutral-900">Add New Product</h2>
+          <button id="seedCatalogBtn" type="button" class="px-3 py-1.5 rounded-xl bg-[#F8CB46] hover:bg-amber-400 text-black text-xs font-extrabold">⚡ Load 12 Starter Items</button>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <input id="pName" type="text" placeholder="Product Name (English)" class="px-3 py-2 rounded-xl border border-neutral-200 text-xs font-medium" />
+          <input id="pTe" type="text" placeholder="Telugu Name (Optional)" class="px-3 py-2 rounded-xl border border-neutral-200 text-xs font-medium" />
+          <select id="pCat" class="px-3 py-2 rounded-xl border border-neutral-200 text-xs font-medium bg-white">
+            <option value="veg">Vegetables</option>
+            <option value="dairy">Dairy & Milk</option>
+            <option value="staples">Rice & Atta</option>
+            <option value="snacks">Snacks</option>
+            <option value="care">Household</option>
+          </select>
+          <input id="pUnit" type="text" placeholder="Unit (e.g. 1 kg, 500 ml)" class="px-3 py-2 rounded-xl border border-neutral-200 text-xs font-medium" />
+          <input id="pMrp" type="number" placeholder="MRP ₹" class="px-3 py-2 rounded-xl border border-neutral-200 text-xs font-medium" />
+          <input id="pPrice" type="number" placeholder="Selling Price ₹" class="px-3 py-2 rounded-xl border border-neutral-200 text-xs font-medium" />
+          <input id="pEmoji" type="text" placeholder="Emoji (e.g. 🍅, 🥛)" class="px-3 py-2 rounded-xl border border-neutral-200 text-xs font-medium" />
+          <button id="addProductBtn" type="button" class="col-span-2 sm:col-span-2 py-2 rounded-xl bg-[#0C831F] hover:bg-[#096b18] text-white text-xs font-extrabold">+ Add to Catalog</button>
+        </div>
+      </div>
+
+      <div id="catalogContainer" class="space-y-2.5">
+        <!-- Populated by JS -->
+      </div>
+    </section>
+
+    <!-- RIDERS TAB -->
+    <section id="ridersSection" class="hidden space-y-4">
+      <div class="bg-white rounded-2xl border border-neutral-200 p-4 space-y-3 shadow-sm">
+        <h2 class="text-sm font-extrabold text-neutral-900">Add Delivery Partner</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <input id="rName" type="text" placeholder="Rider Name" class="px-3 py-2 rounded-xl border border-neutral-200 text-xs font-medium" />
+          <input id="rPhone" type="tel" maxlength="10" placeholder="10-Digit Mobile" class="px-3 py-2 rounded-xl border border-neutral-200 text-xs font-medium" />
+          <input id="rVehicle" type="text" placeholder="Vehicle (e.g. Bike / Auto)" class="px-3 py-2 rounded-xl border border-neutral-200 text-xs font-medium" />
+        </div>
+        <button id="addRiderBtn" type="button" class="w-full sm:w-auto px-5 py-2 rounded-xl bg-[#0C831F] text-white text-xs font-extrabold">+ Add Delivery Partner</button>
+      </div>
+
+      <div id="ridersContainer" class="space-y-2.5">
+        <!-- Populated by JS -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-neutral-900 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg whitespace-nowrap"></div>
+
+  <script>
+    const FIREBASE_DB_URL = "https://blinkit-store-59228-default-rtdb.firebaseio.com";
+    const DEFAULT_PIN = "1234";
+    const ORDER_STEPS = ["Order Placed", "Packing", "On the Way", "Delivered"];
+
+    const STARTER_PRODUCTS = {
+      p1: { name: "Fresh Cow Milk", te: "తాజా ఆవు పాలు", category: "dairy", unit: "500 ml", mrp: 34, price: 30, emoji: "🥛", inStock: true },
+      p2: { name: "Farm Fresh Tomatoes", te: "తాజా టమాటాలు", category: "veg", unit: "1 kg", mrp: 50, price: 38, emoji: "🍅", inStock: true },
+      p3: { name: "Sona Masoori Rice", te: "సోనా మసూరి బియ్యం", category: "staples", unit: "5 kg", mrp: 340, price: 295, emoji: "🍚", inStock: true },
+      p4: { name: "Red Onions", te: "ఉల్లిపాయలు", category: "veg", unit: "1 kg", mrp: 48, price: 40, emoji: "🧅", inStock: true },
+      p5: { name: "Fresh Curd Cup", te: "తాజా పెరుగు", category: "dairy", unit: "400 g", mrp: 42, price: 36, emoji: "🥣", inStock: true },
+      p6: { name: "Whole Wheat Atta", te: "గోధుమ పిండి", category: "staples", unit: "1 kg", mrp: 68, price: 58, emoji: "🌾", inStock: true },
+      p7: { name: "Green Chillies", te: "పచ్చి మిర్చి", category: "veg", unit: "250 g", mrp: 25, price: 18, emoji: "🌶️", inStock: true },
+      p8: { name: "Classic Salted Chips", te: "పొటాటో చిప్స్", category: "snacks", unit: "52 g", mrp: 20, price: 18, emoji: "🥔", inStock: true },
+      p9: { name: "Butter Biscuits", te: "బటర్ బిస్కెట్లు", category: "snacks", unit: "150 g", mrp: 35, price: 30, emoji: "🍪", inStock: true },
+      p10: { name: "Sunflower Cooking Oil", te: "వంట నూనె", category: "staples", unit: "1 L", mrp: 155, price: 138, emoji: "🫗", inStock: true },
+      p11: { name: "Dishwash Gel", te: "డిష్‌వాష్ జెల్", category: "care", unit: "500 ml", mrp: 115, price: 99, emoji: "🧴", inStock: true },
+      p12: { name: "Bananas (Robusta)", te: "అరటిపండ్లు", category: "veg", unit: "6 pcs", mrp: 45, price: 36, emoji: "🍌", inStock: true }
+    };
+
+    let state = {
+      orders: [],
+      products: [],
+      riders: []
+    };
+
+    function showToast(msg) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.classList.remove("hidden");
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => el.classList.add("hidden"), 2500);
+    }
+
+    async function fbFetch(path, options = {}) {
+      const res = await fetch(`${FIREBASE_DB_URL}/${path}.json`, options);
+      if (!res.ok) throw new Error("Firebase request failed");
+      return res.json();
+    }
+
+    async function loadAllData() {
+      try {
+        const [ordersObj, productsObj, ridersObj] = await Promise.all([
+          fbFetch("orders"),
+          fbFetch("products"),
+          fbFetch("riders")
+        ]);
+
+        state.orders = ordersObj
+          ? Object.entries(ordersObj).map(([fbKey, o]) => ({ fbKey, ...o })).reverse()
+          : [];
+        state.products = productsObj
+          ? Object.entries(productsObj).map(([fbKey, p]) => ({ fbKey, ...p }))
+          : [];
+        state.riders = ridersObj
+          ? Object.entries(ridersObj).map(([fbKey, r]) => ({ fbKey, ...r }))
+          : [];
+
+        document.getElementById("dbStatusDot").className = "w-2 h-2 rounded-full bg-[#0C831F]";
+        document.getElementById("dbStatusText").textContent = "Firebase Live";
+        renderAll();
+      } catch (e) {
+        document.getElementById("dbStatusDot").className = "w-2 h-2 rounded-full bg-red-500";
+        document.getElementById("dbStatusText").textContent = "Offline / Preview";
+        renderAll();
+      }
+    }
+
+    function renderAll() {
+      document.getElementById("ordersCountBadge").textContent = state.orders.length;
+      document.getElementById("catalogCountBadge").textContent = state.products.length;
+      document.getElementById("ridersCountBadge").textContent = state.riders.length;
+      renderOrders();
+      renderCatalog();
+      renderRiders();
+    }
+
+    function renderOrders() {
+      const container = document.getElementById("ordersContainer");
+      if (state.orders.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white rounded-2xl border border-neutral-200 p-8 text-center">
+            <div class="text-4xl mb-2">📭</div>
+            <p class="text-sm font-bold text-neutral-800">No orders in Firebase yet</p>
+            <p class="text-xs text-neutral-500 mt-1">New customer orders will appear here automatically.</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = state.orders.map(ord => {
+        const riderOptions = state.riders.map(r =>
+          `<option value="${r.fbKey}" ${ord.riderId === r.fbKey ? "selected" : ""}>${r.name} (${r.vehicle || "Rider"})</option>`
+        ).join("");
+
+        const statusOptions = ORDER_STEPS.map((s, idx) =>
+          `<option value="${idx}" ${Number(ord.statusIndex || 0) === idx ? "selected" : ""}>${s}</option>`
+        ).join("");
+
+        const itemsText = Array.isArray(ord.items)
+          ? ord.items.map(i => `${i.qty}× ${i.name} (${i.unit})`).join(", ")
+          : "";
+
+        return `
+          <div class="bg-white rounded-2xl border border-neutral-200 p-4 shadow-sm space-y-2.5">
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <span class="text-xs font-extrabold text-neutral-900">#${ord.id || ord.fbKey}</span>
+                <span class="text-[11px] text-neutral-500 ml-1.5">${ord.timestamp || ""}</span>
+              </div>
+              <span class="text-xs font-extrabold text-[#0C831F]">₹${ord.total || 0} • ${ord.paymentMethod || "COD"}</span>
+            </div>
+
+            <div class="text-xs space-y-1">
+              <div class="font-bold text-neutral-900">${ord.customerName || "Customer"} • <a href="tel:${ord.phone || ""}" class="text-blue-600 underline">${ord.phone || ""}</a></div>
+              <div class="text-neutral-600">${ord.address || ""}</div>
+              ${ord.mapLink ? `<a href="${ord.mapLink}" target="_blank" rel="noopener noreferrer" class="inline-block text-[11px] font-bold text-[#0C831F] underline">📍 Open Customer GPS Location</a>` : ""}
+            </div>
+
+            <div class="bg-neutral-50 rounded-xl p-2.5 text-xs text-neutral-700 font-medium">${itemsText}</div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              <div>
+                <label class="block text-[10px] font-bold text-neutral-500 uppercase mb-1">Order Status</label>
+                <select data-ord-status="${ord.fbKey}" class="w-full px-2.5 py-2 rounded-xl border border-neutral-200 text-xs font-bold bg-white">
+                  ${statusOptions}
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-neutral-500 uppercase mb-1">Assign Delivery Partner</label>
+                <select data-ord-rider="${ord.fbKey}" class="w-full px-2.5 py-2 rounded-xl border border-neutral-200 text-xs font-bold bg-white">
+                  <option value="">-- Unassigned --</option>
+                  ${riderOptions}
+                </select>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      container.querySelectorAll("[data-ord-status]").forEach(sel => {
+        sel.addEventListener("change", async () => {
+          const key = sel.dataset.ordStatus;
+          const idx = Number(sel.value);
+          try {
+            await fbFetch(`orders/${key}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ statusIndex: idx, status: ORDER_STEPS[idx] })
+            });
+            showToast(`Updated status to ${ORDER_STEPS[idx]}`);
+            loadAllData();
+          } catch (e) {
+            showToast("Failed to update status");
+          }
+        });
+      });
+
+      container.querySelectorAll("[data-ord-rider]").forEach(sel => {
+        sel.addEventListener("change", async () => {
+          const key = sel.dataset.ordRider;
+          const riderId = sel.value;
+          const rider = state.riders.find(r => r.fbKey === riderId);
+          try {
+            await fbFetch(`orders/${key}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                riderId,
+                riderName: rider ? rider.name : "",
+                riderPhone: rider ? rider.phone : ""
+              })
+            });
+            showToast(rider ? `Assigned to ${rider.name}` : "Rider unassigned");
+            loadAllData();
+          } catch (e) {
+            showToast("Failed to assign rider");
+          }
+        });
+      });
+    }
+
+    function renderCatalog() {
+      const container = document.getElementById("catalogContainer");
+      if (state.products.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white rounded-2xl border border-neutral-200 p-6 text-center">
+            <p class="text-sm font-bold text-neutral-800">Catalog is empty in Firebase</p>
+            <p class="text-xs text-neutral-500 mt-1">Click "⚡ Load 12 Starter Items" above to populate your store instantly.</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = state.products.map(p => `
+        <div class="bg-white rounded-2xl border border-neutral-200 p-3 flex items-center justify-between gap-2 shadow-sm">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center text-2xl shrink-0">${p.emoji || "📦"}</div>
+            <div class="min-w-0">
+              <div class="text-xs font-extrabold text-neutral-900 truncate">${p.name} ${p.te ? `(${p.te})` : ""}</div>
+              <div class="text-[11px] text-neutral-500">${p.unit} • ₹${p.price} <span class="line-through text-neutral-400">₹${p.mrp}</span></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button type="button" data-toggle-stock="${p.fbKey}" data-cur="${p.inStock !== false}" class="px-2.5 py-1.5 rounded-xl text-[11px] font-extrabold ${
+              p.inStock !== false ? "bg-green-100 text-[#0C831F]" : "bg-red-100 text-red-600"
+            }">${p.inStock !== false ? "In Stock" : "Out"}</button>
+            <button type="button" data-del-prod="${p.fbKey}" class="px-2 py-1.5 rounded-xl bg-neutral-100 hover:bg-red-50 text-xs text-red-600 font-bold">🗑️</button>
+          </div>
+        </div>
+      `).join("");
+
+      container.querySelectorAll("[data-toggle-stock]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const key = btn.dataset.toggleStock;
+          const next = btn.dataset.cur !== "true";
+          try {
+            await fbFetch(`products/${key}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ inStock: next })
+            });
+            showToast(next ? "Marked In Stock" : "Marked Out of Stock");
+            loadAllData();
+          } catch (e) {
+            showToast("Update failed");
+          }
+        });
+      });
+
+      container.querySelectorAll("[data-del-prod]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const key = btn.dataset.delProd;
+          try {
+            await fbFetch(`products/${key}`, { method: "DELETE" });
+            showToast("Product deleted");
+            loadAllData();
+          } catch (e) {
+            showToast("Delete failed");
+          }
+        });
+      });
+    }
+
+    function renderRiders() {
+      const container = document.getElementById("ridersContainer");
+      if (state.riders.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white rounded-2xl border border-neutral-200 p-6 text-center">
+            <p class="text-sm font-bold text-neutral-800">No delivery partners added yet</p>
+            <p class="text-xs text-neutral-500 mt-1">Add your drivers/riders above to assign orders to them.</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = state.riders.map(r => `
+        <div class="bg-white rounded-2xl border border-neutral-200 p-3 flex items-center justify-between gap-2 shadow-sm">
+          <div>
+            <div class="text-xs font-extrabold text-neutral-900">${r.name} • <span class="text-neutral-500 font-semibold">${r.vehicle || "Bike"}</span></div>
+            <div class="text-[11px] text-neutral-500">📞 ${r.phone}</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${r.isOnline ? "bg-green-100 text-[#0C831F]" : "bg-neutral-100 text-neutral-500"}">${r.isOnline ? "Online" : "Offline"}</span>
+            <button type="button" data-del-rider="${r.fbKey}" class="px-2 py-1.5 rounded-xl bg-neutral-100 text-xs text-red-600 font-bold">🗑️</button>
+          </div>
+        </div>
+      `).join("");
+
+      container.querySelectorAll("[data-del-rider]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          try {
+            await fbFetch(`riders/${btn.dataset.delRider}`, { method: "DELETE" });
+            showToast("Rider removed");
+            loadAllData();
+          } catch (e) {
+            showToast("Remove failed");
+          }
+        });
+      });
+    }
+
+    function switchTab(tab) {
+      const sections = { orders: "ordersSection", catalog: "catalogSection", riders: "ridersSection" };
+      const buttons = { orders: "tabOrders", catalog: "tabCatalog", riders: "tabRiders" };
+      for (const key of Object.keys(sections)) {
+        document.getElementById(sections[key]).classList.toggle("hidden", key !== tab);
+        const btn = document.getElementById(buttons[key]);
+        if (key === tab) {
+          btn.className = "admin-tab flex-1 py-2 rounded-xl bg-[#0C831F] text-white text-xs font-extrabold";
+        } else {
+          btn.className = "admin-tab flex-1 py-2 rounded-xl bg-neutral-100 text-neutral-700 text-xs font-extrabold";
+        }
+      }
+    }
+
+    function init() {
+      // PIN check
+      try {
+        if (sessionStorage.getItem("qk_admin_ok") === "1") {
+          document.getElementById("pinScreen").classList.add("hidden");
+        }
+      } catch (e) {}
+
+      document.getElementById("unlockBtn").addEventListener("click", () => {
+        const val = document.getElementById("pinInput").value.trim();
+        if (val === DEFAULT_PIN) {
+          document.getElementById("pinScreen").classList.add("hidden");
+          document.getElementById("pinError").classList.add("hidden");
+          try { sessionStorage.setItem("qk_admin_ok", "1"); } catch (e) {}
+        } else {
+          document.getElementById("pinError").classList.remove("hidden");
+        }
+      });
+
+      document.getElementById("lockBtn").addEventListener("click", () => {
+        try { sessionStorage.removeItem("qk_admin_ok"); } catch (e) {}
+        document.getElementById("pinInput").value = "";
+        document.getElementById("pinScreen").classList.remove("hidden");
+      });
+
+      document.getElementById("tabOrders").addEventListener("click", () => switchTab("orders"));
+      document.getElementById("tabCatalog").addEventListener("click", () => switchTab("catalog"));
+      document.getElementById("tabRiders").addEventListener("click", () => switchTab("riders"));
+      document.getElementById("refreshAllBtn").addEventListener("click", () => {
+        loadAllData();
+        showToast("Refreshed from Firebase");
+      });
+
+      document.getElementById("seedCatalogBtn").addEventListener("click", async () => {
+        try {
+          await fbFetch("products", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(STARTER_PRODUCTS)
+          });
+          showToast("12 Starter products loaded!");
+          loadAllData();
+        } catch (e) {
+          showToast("Failed to seed products");
+        }
+      });
+
+      document.getElementById("addProductBtn").addEventListener("click", async () => {
+        const name = document.getElementById("pName").value.trim();
+        const te = document.getElementById("pTe").value.trim();
+        const category = document.getElementById("pCat").value;
+        const unit = document.getElementById("pUnit").value.trim() || "1 pc";
+        const mrp = Number(document.getElementById("pMrp").value) || 0;
+        const price = Number(document.getElementById("pPrice").value) || mrp;
+        const emoji = document.getElementById("pEmoji").value.trim() || "📦";
+
+        if (!name || price <= 0) {
+          showToast("Enter product name and price");
+          return;
+        }
+        try {
+          await fbFetch("products", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, te, category, unit, mrp: mrp || price, price, emoji, inStock: true })
+          });
+          document.getElementById("pName").value = "";
+          document.getElementById("pTe").value = "";
+          document.getElementById("pUnit").value = "";
+          document.getElementById("pMrp").value = "";
+          document.getElementById("pPrice").value = "";
+          document.getElementById("pEmoji").value = "";
+          showToast("Product added!");
+          loadAllData();
+        } catch (e) {
+          showToast("Failed to add product");
+        }
+      });
+
+      document.getElementById("addRiderBtn").addEventListener("click", async () => {
+        const name = document.getElementById("rName").value.trim();
+        const phone = document.getElementById("rPhone").value.trim();
+        const vehicle = document.getElementById("rVehicle").value.trim() || "Bike";
+        if (!name || phone.length < 10) {
+          showToast("Enter rider name and 10-digit mobile");
+          return;
+        }
+        try {
+          await fbFetch("riders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, phone, vehicle, isOnline: true })
+          });
+          document.getElementById("rName").value = "";
+          document.getElementById("rPhone").value = "";
+          document.getElementById("rVehicle").value = "";
+          showToast("Delivery partner added!");
+          loadAllData();
+        } catch (e) {
+          showToast("Failed to add rider");
+        }
+      });
+
+      loadAllData();
+    }
+
+    window.addEventListener("DOMContentLoaded", init);
+  </script>
+</body>
+</html>
