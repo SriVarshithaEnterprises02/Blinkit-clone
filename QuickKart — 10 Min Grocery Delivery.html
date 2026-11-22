@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>QuickKart — 10 Min Grocery Delivery</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #F7F8FA;
+      color: #1C1C1C;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .blinkit-header-bg {
+      background: linear-gradient(180deg, #F8CB46 0%, #FFE48F 55%, #FFFFFF 100%);
+    }
+    .add-btn {
+      border: 1.5px solid #0C831F;
+      color: #0C831F;
+      background: #F4FFF6;
+    }
+    .add-btn:active {
+      transform: scale(0.96);
+    }
+    .stepper-btn {
+      background: #0C831F;
+      color: #FFFFFF;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); opacity: 0.6; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .animate-slide-up {
+      animation: slideUp 0.22s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="pb-28 min-h-screen">
+
+  <!-- Top Sticky Header -->
+  <header class="sticky top-0 z-30 blinkit-header-bg shadow-sm">
+    <div class="max-w-4xl mx-auto px-3.5 pt-3 pb-2.5">
+      <div class="flex items-center justify-between gap-2">
+        <!-- Delivery ETA + Location -->
+        <button id="locationBtn" type="button" class="text-left flex-1 min-w-0">
+          <div class="flex items-center gap-1.5">
+            <span class="text-[11px] font-extrabold uppercase tracking-wider bg-black text-[#F8CB46] px-1.5 py-0.5 rounded">10 MINS</span>
+            <span class="text-xs font-semibold text-neutral-800 truncate">Express Delivery</span>
+          </div>
+          <div class="flex items-center gap-1 mt-0.5">
+            <span id="headerLocationText" class="text-sm font-bold text-neutral-900 truncate">Vemulapalli, Kanchikacherla</span>
+            <svg class="w-4 h-4 text-neutral-800 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+        </button>
+
+        <!-- Sync Status + Orders Button -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button id="firebaseConfigBtn" type="button" class="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-white/90 border border-neutral-200 text-[11px] font-semibold text-neutral-700 shadow-sm hover:bg-white">
+            <span id="syncDot" class="w-2 h-2 rounded-full bg-amber-500"></span>
+            <span id="syncLabel">Demo</span>
+          </button>
+          <button id="navOrdersTopBtn" type="button" class="relative p-2 rounded-full bg-white/90 border border-neutral-200 shadow-sm hover:bg-white" aria-label="My Orders">
+            <svg class="w-5 h-5 text-neutral-800" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            <span id="activeOrderBadge" class="hidden absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#0C831F] text-white text-[10px] font-bold flex items-center justify-center">1</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="mt-2.5 relative">
+        <svg class="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/></svg>
+        <input id="searchInput" type="search" placeholder="Search 'milk', 'rice', 'tomato', 'biscuits'..." class="w-full pl-10 pr-9 py-2.5 rounded-xl bg-white border border-neutral-200 text-sm font-medium text-neutral-900 placeholder-neutral-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0C831F]" />
+        <button id="clearSearchBtn" type="button" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 hover:text-neutral-700 px-1">✕</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-4xl mx-auto px-3.5 pt-3">
+
+    <!-- HOME VIEW -->
+    <section id="homeView">
+      <!-- Promo Banner -->
+      <div class="rounded-2xl bg-gradient-to-r from-[#0C831F] to-[#14A42B] text-white p-4 shadow-sm flex items-center justify-between gap-3">
+        <div>
+          <span class="inline-block text-[10px] font-bold uppercase tracking-wider bg-[#F8CB46] text-black px-2 py-0.5 rounded-full">Superfast Local Store</span>
+          <h1 class="text-lg sm:text-xl font-extrabold mt-1 leading-tight">Groceries in 10 Minutes</h1>
+          <p class="text-xs text-green-100 mt-0.5">Free delivery on orders above ₹199 • Pay via UPI or Cash</p>
+        </div>
+        <div class="text-4xl sm:text-5xl select-none shrink-0">🛒</div>
+      </div>
+
+      <!-- Category Horizontal Pills -->
+      <div class="mt-4">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-sm font-extrabold text-neutral-800 tracking-tight">Shop by Category</h2>
+          <span id="productCountLabel" class="text-xs font-medium text-neutral-500">12 items</span>
+        </div>
+        <div id="categoryStrip" class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Product Grid -->
+      <div id="productGrid" class="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Empty Search State -->
+      <div id="emptySearchState" class="hidden text-center py-12 px-4 bg-white rounded-2xl border border-neutral-200 mt-3">
+        <div class="text-4xl mb-2">🔍</div>
+        <p class="text-sm font-bold text-neutral-800">No matching products found</p>
+        <p class="text-xs text-neutral-500 mt-1">Try searching for milk, rice, tomato, or clear your filter.</p>
+        <button id="resetFiltersBtn" type="button" class="mt-3 px-4 py-2 rounded-xl bg-[#0C831F] text-white text-xs font-bold">Show All Products</button>
+      </div>
+    </section>
+
+    <!-- ORDERS & TRACKING VIEW -->
+    <section id="ordersView" class="hidden">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h2 class="text-lg font-extrabold text-neutral-900">Your Orders & Live Tracking</h2>
+          <p class="text-xs text-neutral-500">Track status from store packing to doorstep delivery</p>
+        </div>
+        <button id="backToShopBtn" type="button" class="px-3 py-1.5 rounded-xl bg-neutral-200 text-neutral-800 text-xs font-bold hover:bg-neutral-300">← Shop</button>
+      </div>
+      <div id="ordersList" class="space-y-3">
+        <!-- Populated by JS -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Floating Cart Summary Bar -->
+  <div id="floatingCartBar" class="hidden fixed bottom-16 left-0 right-0 z-30 px-3.5">
+    <div class="max-w-4xl mx-auto">
+      <button id="openCartBtn" type="button" class="w-full bg-[#0C831F] hover:bg-[#096b18] text-white rounded-2xl px-4 py-3 shadow-lg flex items-center justify-between transition">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-lg">🛍️</div>
+          <div class="text-left">
+            <div id="floatingCartItems" class="text-xs font-semibold text-green-100">0 items</div>
+            <div id="floatingCartTotal" class="text-sm font-extrabold">₹0</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-1 text-sm font-extrabold">
+          <span>View Cart</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation Bar -->
+  <nav class="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-neutral-200">
+    <div class="max-w-4xl mx-auto flex items-center justify-around py-2">
+      <button id="tabHomeBtn" type="button" class="flex flex-col items-center gap-0.5 text-[#0C831F] font-bold text-[11px]">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6"/></svg>
+        <span>Home</span>
+      </button>
+      <button id="tabCartBtn" type="button" class="relative flex flex-col items-center gap-0.5 text-neutral-500 font-semibold text-[11px]">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 6h13"/></svg>
+        <span>Cart</span>
+        <span id="navCartCount" class="hidden absolute -top-1 right-0 px-1.5 py-0.2 rounded-full bg-[#0C831F] text-white text-[9px] font-bold">0</span>
+      </button>
+      <button id="tabOrdersBtn" type="button" class="flex flex-col items-center gap-0.5 text-neutral-500 font-semibold text-[11px]">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"/></svg>
+        <span>Orders</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- CART & CHECKOUT MODAL -->
+  <div id="cartModal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center">
+    <div class="bg-[#F7F8FA] w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col overflow-hidden animate-slide-up">
+      <div class="bg-white px-4 py-3.5 border-b border-neutral-200 flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-extrabold text-neutral-900">Your Cart & Checkout</h3>
+          <p class="text-[11px] font-medium text-[#0C831F]">⚡ Delivery in 10–15 minutes</p>
+        </div>
+        <button id="closeCartBtn" type="button" class="w-8 h-8 rounded-full bg-neutral-100 text-neutral-700 font-bold text-sm hover:bg-neutral-200">✕</button>
+      </div>
+
+      <div class="p-4 overflow-y-auto space-y-3.5 flex-1">
+        <!-- Free Delivery Progress -->
+        <div class="bg-white rounded-2xl p-3 border border-neutral-200">
+          <div id="freeDeliveryMsg" class="text-xs font-bold text-neutral-800 mb-1.5">Add ₹199 more for FREE delivery</div>
+          <div class="w-full h-2 bg-neutral-200 rounded-full overflow-hidden">
+            <div id="freeDeliveryBar" class="h-full bg-[#0C831F] transition-all duration-300" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- Cart Items -->
+        <div id="cartItemsContainer" class="bg-white rounded-2xl p-3 border border-neutral-200 divide-y divide-neutral-100">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Bill Details -->
+        <div class="bg-white rounded-2xl p-3.5 border border-neutral-200 space-y-1.5 text-xs">
+          <div class="font-extrabold text-neutral-900 text-sm mb-1">Bill Details</div>
+          <div class="flex justify-between text-neutral-600"><span>Items Total</span><span id="billSubtotal">₹0</span></div>
+          <div class="flex justify-between text-neutral-600"><span>Delivery Charge</span><span id="billDelivery">₹15</span></div>
+          <div class="flex justify-between font-extrabold text-neutral-900 text-sm pt-2 border-t border-neutral-100"><span>Grand Total</span><span id="billGrandTotal">₹0</span></div>
+        </div>
+
+        <!-- Delivery Address Form -->
+        <div class="bg-white rounded-2xl p-3.5 border border-neutral-200 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-extrabold text-neutral-900">Delivery Details</span>
+            <button id="gpsLocateBtn" type="button" class="text-[11px] font-bold text-[#0C831F] bg-green-50 px-2.5 py-1 rounded-lg border border-green-200 hover:bg-green-100">📍 Use GPS</button>
+          </div>
+          <input id="custName" type="text" placeholder="Your Full Name" class="w-full px-3 py-2 rounded-xl border border-neutral-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#0C831F]" />
+          <input id="custPhone" type="tel" maxlength="10" placeholder="10-Digit Mobile Number" class="w-full px-3 py-2 rounded-xl border border-neutral-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#0C831F]" />
+          <textarea id="custAddress" rows="2" placeholder="House No, Street, Village / Landmark" class="w-full px-3 py-2 rounded-xl border border-neutral-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#0C831F]"></textarea>
+          <p id="gpsStatusMsg" class="hidden text-[11px] text-[#0C831F] font-semibold"></p>
+        </div>
+
+        <!-- Payment Mode -->
+        <div class="bg-white rounded-2xl p-3.5 border border-neutral-200 space-y-2">
+          <div class="text-sm font-extrabold text-neutral-900">Payment Method</div>
+          <div class="grid grid-cols-2 gap-2">
+            <button id="payUpiBtn" type="button" class="pay-mode-btn p-2.5 rounded-xl border-2 border-[#0C831F] bg-green-50 text-xs font-bold text-[#0C831F]">📱 UPI / PhonePe</button>
+            <button id="payCodBtn" type="button" class="pay-mode-btn p-2.5 rounded-xl border border-neutral-200 bg-white text-xs font-bold text-neutral-700">💵 Cash on Delivery</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white p-3.5 border-t border-neutral-200">
+        <button id="placeOrderBtn" type="button" class="w-full py-3 rounded-2xl bg-[#0C831F] hover:bg-[#096b18] text-white font-extrabold text-sm shadow-md transition">Place Order</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOCATION MODAL -->
+  <div id="locationModal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center">
+    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-4 space-y-3 animate-slide-up">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-extrabold text-neutral-900">Select Delivery Area</h3>
+        <button id="closeLocationBtn" type="button" class="w-8 h-8 rounded-full bg-neutral-100 text-neutral-700 font-bold text-sm">✕</button>
+      </div>
+      <div class="flex flex-wrap gap-2" id="areaPresets">
+        <button type="button" class="area-chip px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-green-50 text-xs font-semibold text-neutral-800" data-area="Vemulapalli, Kanchikacherla">Vemulapalli</button>
+        <button type="button" class="area-chip px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-green-50 text-xs font-semibold text-neutral-800" data-area="Kanchikacherla Main Road">Kanchikacherla</button>
+        <button type="button" class="area-chip px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-green-50 text-xs font-semibold text-neutral-800" data-area="Chevitikallu">Chevitikallu</button>
+        <button type="button" class="area-chip px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-green-50 text-xs font-semibold text-neutral-800" data-area="Paritala">Paritala</button>
+      </div>
+      <div class="flex gap-2 pt-1">
+        <input id="customAreaInput" type="text" placeholder="Or type your village / street..." class="flex-1 px-3 py-2 rounded-xl border border-neutral-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#0C831F]" />
+        <button id="saveCustomAreaBtn" type="button" class="px-4 py-2 rounded-xl bg-[#0C831F] text-white text-xs font-bold">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIREBASE CONFIG MODAL -->
+  <div id="firebaseModal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center">
+    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-4 space-y-3 animate-slide-up">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-extrabold text-neutral-900">Connect Firebase Database</h3>
+        <button id="closeFirebaseBtn" type="button" class="w-8 h-8 rounded-full bg-neutral-100 text-neutral-700 font-bold text-sm">✕</button>
+      </div>
+      <p class="text-xs text-neutral-600 leading-relaxed">Paste your Firebase Realtime Database URL (e.g. <span class="font-mono text-[11px] bg-neutral-100 px-1 rounded">https://your-app-default-rtdb.firebaseio.com</span>) to sync live products and orders with your Admin & Delivery apps. Leave blank for offline Demo Mode.</p>
+      <input id="firebaseUrlInput" type="url" placeholder="https://your-project-default-rtdb.firebaseio.com" class="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#0C831F]" />
+      <div class="flex gap-2">
+        <button id="saveFirebaseBtn" type="button" class="flex-1 py-2.5 rounded-xl bg-[#0C831F] text-white text-xs font-bold">Save & Sync</button>
+        <button id="resetDemoBtn" type="button" class="px-4 py-2.5 rounded-xl bg-neutral-100 text-neutral-700 text-xs font-bold">Use Demo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="hidden fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-neutral-900 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg whitespace-nowrap"></div>
+
+  <script>
+    // Optional: Pre-fill your Firebase Realtime Database URL here for permanent live sync
+    const DEFAULT_FIREBASE_URL = "";
+
+    const CATEGORIES = [
+      { id: "all", label: "All", icon: "✨" },
+      { id: "veg", label: "Vegetables", icon: "🥦" },
+      { id: "dairy", label: "Dairy & Milk", icon: "🥛" },
+      { id: "staples", label: "Rice & Atta", icon: "🌾" },
+      { id: "snacks", label: "Snacks", icon: "🍪" },
+      { id: "care", label: "Household", icon: "🧼" }
+    ];
+
+    const SAMPLE_PRODUCTS = [
+      { id: "p1", name: "Fresh Cow Milk", te: "తాజా ఆవు పాలు", category: "dairy", unit: "500 ml", mrp: 34, price: 30, emoji: "🥛", inStock: true },
+      { id: "p2", name: "Farm Fresh Tomatoes", te: "తాజా టమాటాలు", category: "veg", unit: "1 kg", mrp: 50, price: 38, emoji: "🍅", inStock: true },
+      { id: "p3", name: "Sona Masoori Rice", te: "సోనా మసూరి బియ్యం", category: "staples", unit: "5 kg", mrp: 340, price: 295, emoji: "🍚", inStock: true },
+      { id: "p4", name: "Red Onions", te: "ఉల్లిపాయలు", category: "veg", unit: "1 kg", mrp: 48, price: 40, emoji: "🧅", inStock: true },
+      { id: "p5", name: "Fresh Curd Cup", te: "తాజా పెరుగు", category: "dairy", unit: "400 g", mrp: 42, price: 36, emoji: "🥣", inStock: true },
+      { id: "p6", name: "Whole Wheat Atta", te: "గోధుమ పిండి", category: "staples", unit: "1 kg", mrp: 68, price: 58, emoji: "🌾", inStock: true },
+      { id: "p7", name: "Green Chillies", te: "పచ్చి మిర్చి", category: "veg", unit: "250 g", mrp: 25, price: 18, emoji: "🌶️", inStock: true },
+      { id: "p8", name: "Classic Salted Chips", te: "పొటాటో చిప్స్", category: "snacks", unit: "52 g", mrp: 20, price: 18, emoji: "🥔", inStock: true },
+      { id: "p9", name: "Butter Biscuits", te: "బటర్ బిస్కెట్లు", category: "snacks", unit: "150 g", mrp: 35, price: 30, emoji: "🍪", inStock: true },
+      { id: "p10", name: "Sunflower Cooking Oil", te: "వంట నూనె", category: "staples", unit: "1 L", mrp: 155, price: 138, emoji: "🫗", inStock: true },
+      { id: "p11", name: "Dishwash Gel", te: "డిష్‌వాష్ జెల్", category: "care", unit: "500 ml", mrp: 115, price: 99, emoji: "🧴", inStock: true },
+      { id: "p12", name: "Bananas (Robusta)", te: "అరటిపండ్లు", category: "veg", unit: "6 pcs", mrp: 45, price: 36, emoji: "🍌", inStock: true }
+    ];
+
+    const ORDER_STEPS = ["Order Placed", "Packing", "On the Way", "Delivered"];
+
+    let state = {
+      firebaseUrl: DEFAULT_FIREBASE_URL,
+      products: [...SAMPLE_PRODUCTS],
+      cart: {},
+      orders: [],
+      selectedCategory: "all",
+      searchQuery: "",
+      locationArea: "Vemulapalli, Kanchikacherla",
+      paymentMethod: "UPI / PhonePe",
+      gpsCoords: null
+    };
+
+    function safeGetStorage(key, fallback) {
+      try {
+        const val = localStorage.getItem(key);
+        return val ? JSON.parse(val) : fallback;
+      } catch (e) {
+        return fallback;
+      }
+    }
+
+    function safeSetStorage(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (e) {}
+    }
+
+    function showToast(msg) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.classList.remove("hidden");
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => el.classList.add("hidden"), 2500);
+    }
+
+    function updateSyncBadge() {
+      const dot = document.getElementById("syncDot");
+      const label = document.getElementById("syncLabel");
+      if (state.firebaseUrl) {
+        dot.className = "w-2 h-2 rounded-full bg-[#0C831F]";
+        label.textContent = "Live";
+      } else {
+        dot.className = "w-2 h-2 rounded-full bg-amber-500";
+        label.textContent = "Demo";
+      }
+    }
+
+    async function loadProductsFromFirebase() {
+      if (!state.firebaseUrl) return;
+      try {
+        const cleanUrl = state.firebaseUrl.replace(/\/+$/, "");
+        const res = await fetch(`${cleanUrl}/products.json`);
+        if (!res.ok) throw new Error("Network error");
+        const data = await res.json();
+        if (data && typeof data === "object") {
+          const list = Object.entries(data).map(([id, item]) => ({ id, ...item }));
+          if (list.length > 0) {
+            state.products = list;
+            renderProducts();
+            showToast("Synced products from Firebase");
+          }
+        }
+      } catch (e) {
+        showToast("Could not reach Firebase; showing local catalog");
+      }
+    }
+
+    function renderCategories() {
+      const strip = document.getElementById("categoryStrip");
+      strip.innerHTML = CATEGORIES.map(cat => {
+        const active = state.selectedCategory === cat.id;
+        return `
+          <button type="button" data-cat="${cat.id}" class="cat-pill shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition ${
+            active
+              ? "bg-[#0C831F] text-white border-[#0C831F] shadow-sm"
+              : "bg-white text-neutral-700 border-neutral-200 hover:border-[#0C831F]"
+          }">
+            <span>${cat.icon}</span>
+            <span>${cat.label}</span>
+          </button>
+        `;
+      }).join("");
+
+      strip.querySelectorAll(".cat-pill").forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.selectedCategory = btn.dataset.cat;
+          renderCategories();
+          renderProducts();
+        });
+      });
+    }
+
+    function renderProducts() {
+      const grid = document.getElementById("productGrid");
+      const empty = document.getElementById("emptySearchState");
+      const q = state.searchQuery.trim().toLowerCase();
+
+      const filtered = state.products.filter(p => {
+        const matchCat = state.selectedCategory === "all" || p.category === state.selectedCategory;
+        const matchQuery = !q || p.name.toLowerCase().includes(q) || (p.te && p.te.toLowerCase().includes(q));
+        return matchCat && matchQuery;
+      });
+
+      document.getElementById("productCountLabel").textContent = `${filtered.length} items`;
+
+      if (filtered.length === 0) {
+        grid.innerHTML = "";
+        empty.classList.remove("hidden");
+        return;
+      }
+      empty.classList.add("hidden");
+
+      grid.innerHTML = filtered.map(p => {
+        const qty = state.cart[p.id] || 0;
+        const discount = p.mrp > p.price ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0;
+        return `
+          <div class="bg-white rounded-2xl border border-neutral-200 p-2.5 flex flex-col justify-between shadow-sm">
+            <div>
+              <div class="relative bg-[#F4F6FB] rounded-xl h-24 flex items-center justify-center text-4xl select-none">
+                ${discount > 0 ? `<span class="absolute top-1.5 left-1.5 bg-[#2563EB] text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded">${discount}% OFF</span>` : ""}
+                <span>${p.emoji || "📦"}</span>
+                <span class="absolute bottom-1.5 left-1.5 bg-white/95 text-neutral-800 text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm">⚡ 10 MINS</span>
+              </div>
+              <div class="mt-2">
+                <h3 class="text-xs font-bold text-neutral-900 leading-snug line-clamp-2">${p.name}</h3>
+                ${p.te ? `<p class="text-[11px] text-neutral-500 truncate">${p.te}</p>` : ""}
+                <p class="text-[11px] font-semibold text-neutral-500 mt-0.5">${p.unit}</p>
+              </div>
+            </div>
+
+            <div class="mt-2.5 flex items-center justify-between gap-1">
+              <div>
+                <div class="text-xs font-extrabold text-neutral-900">₹${p.price}</div>
+                ${p.mrp > p.price ? `<div class="text-[10px] text-neutral-400 line-through">₹${p.mrp}</div>` : ""}
+              </div>
+              ${
+                !p.inStock
+                  ? `<span class="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-1 rounded-lg">Out of Stock</span>`
+                  : qty === 0
+                  ? `<button type="button" data-add="${p.id}" class="add-btn px-3.5 py-1.5 rounded-lg text-xs font-extrabold">ADD</button>`
+                  : `<div class="stepper-btn flex items-center rounded-lg overflow-hidden text-xs font-extrabold">
+                      <button type="button" data-dec="${p.id}" class="px-2 py-1.5 hover:bg-black/10">−</button>
+                      <span class="px-1.5">${qty}</span>
+                      <button type="button" data-inc="${p.id}" class="px-2 py-1.5 hover:bg-black/10">+</button>
+                    </div>`
+              }
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      grid.querySelectorAll("[data-add], [data-inc]").forEach(btn => {
+        btn.addEventListener("click", () => updateCartQty(btn.dataset.add || btn.dataset.inc, 1));
+      });
+      grid.querySelectorAll("[data-dec]").forEach(btn => {
+        btn.addEventListener("click", () => updateCartQty(btn.dataset.dec, -1));
+      });
+    }
+
+    function updateCartQty(productId, delta) {
+      const current = state.cart[productId] || 0;
+      const next = current + delta;
+      if (next <= 0) {
+        delete state.cart[productId];
+      } else {
+        state.cart[productId] = next;
+      }
+      safeSetStorage("qk_cart", state.cart);
+      renderProducts();
+      updateCartUI();
+    }
+
+    function getCartTotals() {
+      let count = 0;
+      let subtotal = 0;
+      const items = [];
+      for (const [id, qty] of Object.entries(state.cart)) {
+        const prod = state.products.find(p => p.id === id);
+        if (prod && qty > 0) {
+          count += qty;
+          subtotal += prod.price * qty;
+          items.push({ ...prod, qty, lineTotal: prod.price * qty });
+        }
+      }
+      const deliveryFee = subtotal === 0 || subtotal >= 199 ? 0 : 15;
+      return { count, subtotal, deliveryFee, grandTotal: subtotal + deliveryFee, items };
+    }
+
+    function updateCartUI() {
+      const { count, subtotal, deliveryFee, grandTotal, items } = getCartTotals();
+      const floatingBar = document.getElementById("floatingCartBar");
+      const navBadge = document.getElementById("navCartCount");
+
+      if (count > 0) {
+        floatingBar.classList.remove("hidden");
+        document.getElementById("floatingCartItems").textContent = `${count} ${count === 1 ? "item" : "items"}`;
+        document.getElementById("floatingCartTotal").textContent = `₹${subtotal}`;
+        navBadge.textContent = count;
+        navBadge.classList.remove("hidden");
+      } else {
+        floatingBar.classList.add("hidden");
+        navBadge.classList.add("hidden");
+      }
+
+      // Update Cart Modal if open
+      const container = document.getElementById("cartItemsContainer");
+      if (items.length === 0) {
+        container.innerHTML = `<p class="text-xs text-neutral-500 text-center py-4">Your cart is empty. Add items to get started!</p>`;
+      } else {
+        container.innerHTML = items.map(item => `
+          <div class="py-2.5 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="text-2xl">${item.emoji || "📦"}</span>
+              <div class="min-w-0">
+                <div class="text-xs font-bold text-neutral-900 truncate">${item.name}</div>
+                <div class="text-[11px] text-neutral-500">${item.unit} • ₹${item.price}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2.5 shrink-0">
+              <div class="stepper-btn flex items-center rounded-lg overflow-hidden text-xs font-extrabold">
+                <button type="button" data-cdec="${item.id}" class="px-2 py-1 hover:bg-black/10">−</button>
+                <span class="px-1.5">${item.qty}</span>
+                <button type="button" data-cinc="${item.id}" class="px-2 py-1 hover:bg-black/10">+</button>
+              </div>
+              <div class="text-xs font-extrabold text-neutral-900 w-11 text-right">₹${item.lineTotal}</div>
+            </div>
+          </div>
+        `).join("");
+
+        container.querySelectorAll("[data-cinc]").forEach(b => b.addEventListener("click", () => updateCartQty(b.dataset.cinc, 1)));
+        container.querySelectorAll("[data-cdec]").forEach(b => b.addEventListener("click", () => updateCartQty(b.dataset.cdec, -1)));
+      }
+
+      const remaining = Math.max(0, 199 - subtotal);
+      const pct = Math.min(100, Math.round((subtotal / 199) * 100));
+      document.getElementById("freeDeliveryBar").style.width = `${pct}%`;
+      document.getElementById("freeDeliveryMsg").textContent =
+        subtotal >= 199 ? "🎉 You unlocked FREE delivery!" : `Add ₹${remaining} more for FREE delivery`;
+
+      document.getElementById("billSubtotal").textContent = `₹${subtotal}`;
+      document.getElementById("billDelivery").textContent = deliveryFee === 0 ? "FREE" : `₹${deliveryFee}`;
+      document.getElementById("billGrandTotal").textContent = `₹${grandTotal}`;
+    }
+
+    async function placeOrder() {
+      const { count, subtotal, deliveryFee, grandTotal, items } = getCartTotals();
+      if (count === 0) {
+        showToast("Please add items to your cart first");
+        return;
+      }
+      const name = document.getElementById("custName").value.trim();
+      const phone = document.getElementById("custPhone").value.trim();
+      const address = document.getElementById("custAddress").value.trim();
+
+      if (!name || phone.length < 10 || !address) {
+        showToast("Enter name, 10-digit mobile & delivery address");
+        return;
+      }
+
+      const order = {
+        id: "ORD" + Math.floor(100000 + Math.random() * 900000),
+        customerName: name,
+        phone,
+        address: `${address} (${state.locationArea})`,
+        mapLink: state.gpsCoords ? `https://maps.google.com/?q=${state.gpsCoords.lat},${state.gpsCoords.lng}` : "",
+        items: items.map(i => ({ name: i.name, unit: i.unit, qty: i.qty, price: i.price })),
+        subtotal,
+        deliveryFee,
+        total: grandTotal,
+        paymentMethod: state.paymentMethod,
+        statusIndex: 0,
+        status: ORDER_STEPS[0],
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      };
+
+      if (state.firebaseUrl) {
+        try {
+          const cleanUrl = state.firebaseUrl.replace(/\/+$/, "");
+          await fetch(`${cleanUrl}/orders.json`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(order)
+          });
+        } catch (e) {
+          showToast("Saved locally (Firebase offline)");
+        }
+      }
+
+      state.orders.unshift(order);
+      safeSetStorage("qk_orders", state.orders);
+      safeSetStorage("qk_profile", { name, phone, address });
+
+      state.cart = {};
+      safeSetStorage("qk_cart", state.cart);
+      renderProducts();
+      updateCartUI();
+      document.getElementById("cartModal").classList.add("hidden");
+      switchView("orders");
+      showToast("Order placed! Preparing in 10 mins ⚡");
+    }
+
+    function renderOrders() {
+      const list = document.getElementById("ordersList");
+      const badge = document.getElementById("activeOrderBadge");
+      const activeCount = state.orders.filter(o => o.statusIndex < 3).length;
+      if (activeCount > 0) {
+        badge.textContent = activeCount;
+        badge.classList.remove("hidden");
+      } else {
+        badge.classList.add("hidden");
+      }
+
+      if (state.orders.length === 0) {
+        list.innerHTML = `
+          <div class="bg-white rounded-2xl border border-neutral-200 p-8 text-center">
+            <div class="text-4xl mb-2">📦</div>
+            <p class="text-sm font-bold text-neutral-800">No orders yet</p>
+            <p class="text-xs text-neutral-500 mt-1">Place your first 10-minute order from the Home tab.</p>
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = state.orders.map((ord, idx) => {
+        const stepsHtml = ORDER_STEPS.map((st, sIdx) => {
+          const done = sIdx <= ord.statusIndex;
+          return `
+            <div class="flex-1 flex flex-col items-center text-center">
+              <div class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${done ? "bg-[#0C831F] text-white" : "bg-neutral-200 text-neutral-500"}">${done ? "✓" : sIdx + 1}</div>
+              <span class="text-[10px] mt-1 font-semibold ${done ? "text-[#0C831F]" : "text-neutral-400"}">${st}</span>
+            </div>
+          `;
+        }).join("");
+
+        return `
+          <div class="bg-white rounded-2xl border border-neutral-200 p-3.5 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-xs font-extrabold text-neutral-900">#${ord.id}</span>
+                <span class="text-[11px] text-neutral-500 ml-1.5">${ord.timestamp}</span>
+              </div>
+              <span class="text-xs font-extrabold text-[#0C831F]">₹${ord.total} • ${ord.paymentMethod}</span>
+            </div>
+            <div class="flex items-start justify-between gap-1 pt-1">${stepsHtml}</div>
+            <div class="text-xs text-neutral-600 bg-neutral-50 rounded-xl p-2.5">
+              ${ord.items.map(i => `${i.qty}× ${i.name} (${i.unit})`).join(", ")}
+            </div>
+            ${ord.statusIndex < 3 ? `
+              <button type="button" data-advance="${idx}" class="w-full py-2 rounded-xl border border-[#0C831F] text-[#0C831F] text-xs font-bold hover:bg-green-50">
+                Simulate Next Delivery Step →
+              </button>` : `<div class="text-center text-xs font-bold text-[#0C831F]">✅ Delivered</div>`}
+          </div>
+        `;
+      }).join("");
+
+      list.querySelectorAll("[data-advance]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const i = Number(btn.dataset.advance);
+          if (state.orders[i] && state.orders[i].statusIndex < 3) {
+            state.orders[i].statusIndex += 1;
+            state.orders[i].status = ORDER_STEPS[state.orders[i].statusIndex];
+            safeSetStorage("qk_orders", state.orders);
+            renderOrders();
+          }
+        });
+      });
+    }
+
+    function switchView(view) {
+      const home = document.getElementById("homeView");
+      const orders = document.getElementById("ordersView");
+      const tabHome = document.getElementById("tabHomeBtn");
+      const tabOrders = document.getElementById("tabOrdersBtn");
+      if (view === "orders") {
+        home.classList.add("hidden");
+        orders.classList.remove("hidden");
+        tabOrders.classList.replace("text-neutral-500", "text-[#0C831F]");
+        tabHome.classList.replace("text-[#0C831F]", "text-neutral-500");
+        renderOrders();
+      } else {
+        orders.classList.add("hidden");
+        home.classList.remove("hidden");
+        tabHome.classList.replace("text-neutral-500", "text-[#0C831F]");
+        tabOrders.classList.replace("text-[#0C831F]", "text-neutral-500");
+      }
+    }
+
+    function init() {
+      state.cart = safeGetStorage("qk_cart", {});
+      state.orders = safeGetStorage("qk_orders", []);
+      state.locationArea = safeGetStorage("qk_area", state.locationArea);
+      state.firebaseUrl = safeGetStorage("qk_firebase", DEFAULT_FIREBASE_URL);
+      const profile = safeGetStorage("qk_profile", null);
+      if (profile) {
+        document.getElementById("custName").value = profile.name || "";
+        document.getElementById("custPhone").value = profile.phone || "";
+        document.getElementById("custAddress").value = profile.address || "";
+      }
+
+      document.getElementById("headerLocationText").textContent = state.locationArea;
+      document.getElementById("firebaseUrlInput").value = state.firebaseUrl;
+      updateSyncBadge();
+      renderCategories();
+      renderProducts();
+      updateCartUI();
+      renderOrders();
+      if (state.firebaseUrl) loadProductsFromFirebase();
+
+      // Search
+      const searchInput = document.getElementById("searchInput");
+      const clearBtn = document.getElementById("clearSearchBtn");
+      searchInput.addEventListener("input", () => {
+        state.searchQuery = searchInput.value;
+        clearBtn.classList.toggle("hidden", !state.searchQuery);
+        renderProducts();
+      });
+      clearBtn.addEventListener("click", () => {
+        searchInput.value = "";
+        state.searchQuery = "";
+        clearBtn.classList.add("hidden");
+        renderProducts();
+      });
+      document.getElementById("resetFiltersBtn").addEventListener("click", () => {
+        searchInput.value = "";
+        state.searchQuery = "";
+        state.selectedCategory = "all";
+        clearBtn.classList.add("hidden");
+        renderCategories();
+        renderProducts();
+      });
+
+      // Navigation
+      document.getElementById("tabHomeBtn").addEventListener("click", () => switchView("home"));
+      document.getElementById("backToShopBtn").addEventListener("click", () => switchView("home"));
+      document.getElementById("tabOrdersBtn").addEventListener("click", () => switchView("orders"));
+      document.getElementById("navOrdersTopBtn").addEventListener("click", () => switchView("orders"));
+      document.getElementById("tabCartBtn").addEventListener("click", () => {
+        updateCartUI();
+        document.getElementById("cartModal").classList.remove("hidden");
+      });
+      document.getElementById("openCartBtn").addEventListener("click", () => {
+        updateCartUI();
+        document.getElementById("cartModal").classList.remove("hidden");
+      });
+      document.getElementById("closeCartBtn").addEventListener("click", () => {
+        document.getElementById("cartModal").classList.add("hidden");
+      });
+
+      // Payment toggle
+      document.getElementById("payUpiBtn").addEventListener("click", () => {
+        state.paymentMethod = "UPI / PhonePe";
+        document.getElementById("payUpiBtn").className = "pay-mode-btn p-2.5 rounded-xl border-2 border-[#0C831F] bg-green-50 text-xs font-bold text-[#0C831F]";
+        document.getElementById("payCodBtn").className = "pay-mode-btn p-2.5 rounded-xl border border-neutral-200 bg-white text-xs font-bold text-neutral-700";
+      });
+      document.getElementById("payCodBtn").addEventListener("click", () => {
+        state.paymentMethod = "Cash on Delivery";
+        document.getElementById("payCodBtn").className = "pay-mode-btn p-2.5 rounded-xl border-2 border-[#0C831F] bg-green-50 text-xs font-bold text-[#0C831F]";
+        document.getElementById("payUpiBtn").className = "pay-mode-btn p-2.5 rounded-xl border border-neutral-200 bg-white text-xs font-bold text-neutral-700";
+      });
+
+      // GPS button
+      document.getElementById("gpsLocateBtn").addEventListener("click", () => {
+        const msg = document.getElementById("gpsStatusMsg");
+        if (!navigator.geolocation) {
+          showToast("GPS not supported on this browser");
+          return;
+        }
+        msg.textContent = "Fetching GPS coordinates...";
+        msg.classList.remove("hidden");
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            state.gpsCoords = { lat: pos.coords.latitude.toFixed(5), lng: pos.coords.longitude.toFixed(5) };
+            msg.textContent = `📍 GPS pinned (${state.gpsCoords.lat}, ${state.gpsCoords.lng})`;
+          },
+          () => {
+            msg.textContent = "Please allow location permission or enter address manually.";
+          }
+        );
+      });
+
+      document.getElementById("placeOrderBtn").addEventListener("click", placeOrder);
+
+      // Location modal
+      document.getElementById("locationBtn").addEventListener("click", () => document.getElementById("locationModal").classList.remove("hidden"));
+      document.getElementById("closeLocationBtn").addEventListener("click", () => document.getElementById("locationModal").classList.add("hidden"));
+      document.querySelectorAll(".area-chip").forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.locationArea = btn.dataset.area;
+          safeSetStorage("qk_area", state.locationArea);
+          document.getElementById("headerLocationText").textContent = state.locationArea;
+          document.getElementById("locationModal").classList.add("hidden");
+        });
+      });
+      document.getElementById("saveCustomAreaBtn").addEventListener("click", () => {
+        const val = document.getElementById("customAreaInput").value.trim();
+        if (val) {
+          state.locationArea = val;
+          safeSetStorage("qk_area", state.locationArea);
+          document.getElementById("headerLocationText").textContent = state.locationArea;
+          document.getElementById("locationModal").classList.add("hidden");
+        }
+      });
+
+      // Firebase modal
+      document.getElementById("firebaseConfigBtn").addEventListener("click", () => document.getElementById("firebaseModal").classList.remove("hidden"));
+      document.getElementById("closeFirebaseBtn").addEventListener("click", () => document.getElementById("firebaseModal").classList.add("hidden"));
+      document.getElementById("saveFirebaseBtn").addEventListener("click", () => {
+        state.firebaseUrl = document.getElementById("firebaseUrlInput").value.trim();
+        safeSetStorage("qk_firebase", state.firebaseUrl);
+        updateSyncBadge();
+        document.getElementById("firebaseModal").classList.add("hidden");
+        if (state.firebaseUrl) loadProductsFromFirebase();
+      });
+      document.getElementById("resetDemoBtn").addEventListener("click", () => {
+        state.firebaseUrl = "";
+        state.products = [...SAMPLE_PRODUCTS];
+        safeSetStorage("qk_firebase", "");
+        document.getElementById("firebaseUrlInput").value = "";
+        updateSyncBadge();
+        renderProducts();
+        document.getElementById("firebaseModal").classList.add("hidden");
+        showToast("Switched to Demo Mode");
+      });
+    }
+
+    window.addEventListener("DOMContentLoaded", init);
+  </script>
+</body>
+</html>
